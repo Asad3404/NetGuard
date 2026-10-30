@@ -1,0 +1,64 @@
+# Optional lab-mode demo topology.
+#
+# Four nodes on one isolated bridge so the L2/L3 attacks have a shared segment:
+#   attacker  172.28.0.66   - runs the netguard attack side
+#   victim    172.28.0.10   - runs the netguard detector on its interface
+#   host1     172.28.0.20   - a bystander, generates a little benign traffic
+#   resolver  172.28.0.53   - stands in for the DNS/DHCP server
+#
+# This network is marked `internal: true` so it has NO route to the outside
+# world — the attacks cannot escape the lab. Running the attacks still requires
+# the explicit lab flag inside the container.
+#
+# NOTE: raw-socket send/sniff needs NET_ADMIN + NET_RAW; granted per service
+# below. If your Docker/WSL2 setup makes cross-container L2 capture awkward, the
+# authoritative, privilege-free demo is `make demo` (the bundled PCAPs).
+
+services:
+  attacker:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: ng-attacker
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.66
+
+  victim:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: ng-victim
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.10
+
+  host1:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: ng-host1
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.20
+
+  resolver:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    container_name: ng-resolver
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.53
+
+networks:
+  labnet:
+    driver: bridge
+    internal: true          # no gateway to the host/internet: attacks stay in the lab
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

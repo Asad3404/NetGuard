@@ -1,0 +1,51 @@
+# Optional containerlab topology (for use alongside SecureNet Lab).
+#
+# Same four nodes as docker-compose.yml, expressed for containerlab so this
+# project can be dropped into a containerlab-based lab. Build the image first:
+#
+#   docker build -t netguard:demo -f demo/Dockerfile .
+#   sudo containerlab deploy -t demo/topology.clab.yml
+#
+# Then exec into nodes just like the docker-compose demo:
+#   docker exec -it clab-netguard-victim netguard detect --iface eth1 --json
+#   docker exec -it clab-netguard-attacker netguard attack \
+#       --i-understand-this-is-a-lab --live synscan --target-ip 172.28.0.10
+#
+# As with every attack path here: private lab addresses only, lab flag required.
+name: netguard
+
+topology:
+  nodes:
+    # Shared L2 segment. `kind: bridge` expects a Linux bridge named br-lab to
+    # exist on the host first:  sudo ip link add br-lab type bridge && sudo ip link set br-lab up
+    br-lab:
+      kind: bridge
+    attacker:
+      kind: linux
+      image: netguard:demo
+      exec:
+        - ip addr add 172.28.0.66/24 dev eth1
+    victim:
+      kind: linux
+      image: netguard:demo
+      exec:
+        - ip addr add 172.28.0.10/24 dev eth1
+    host1:
+      kind: linux
+      image: netguard:demo
+      exec:
+        - ip addr add 172.28.0.20/24 dev eth1
+    resolver:
+      kind: linux
+      image: netguard:demo
+      exec:
+        - ip addr add 172.28.0.53/24 dev eth1
+
+  links:
+    # One shared bridge segment so the L2 attacks have a broadcast domain.
+    - endpoints: ["attacker:eth1", "br-lab:eth1"]
+    - endpoints: ["victim:eth1", "br-lab:eth2"]
+    - endpoints: ["host1:eth1", "br-lab:eth3"]
+    - endpoints: ["resolver:eth1", "br-lab:eth4"]
+
+  nodes_defaults: {}
