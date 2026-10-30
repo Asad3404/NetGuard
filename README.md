@@ -221,9 +221,3 @@ pentest toolkit for arbitrary networks.
 
 If you only want to see the detectors work, you never need the attack side at
 all: `make demo` runs entirely on the bundled captures.
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
